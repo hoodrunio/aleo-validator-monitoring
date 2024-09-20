@@ -128,9 +128,8 @@ outputs/
 # Ignore entire Aleo SDK folder
 aleo-sdk/
 
-# Package lock files (uncomment if you want to ignore these)
-# package-lock.json
-# yarn.lock
+package-lock.json
+yarn.lock
 
 # Local Netlify folder
 .netlify
