@@ -1,0 +1,146 @@
+[
+  {
+    "address": "test_address",
+    "stake": "1000",
+    "last_seen": "2024-09-19T00:19:31.578Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": null,
+    "bonded": null
+  },
+  {
+    "address": "aleo1l2a3lakq9pz9w9hyre7rk9zmk64wzr62z0q26wglr8tmf8w5cyqqxtt364",
+    "stake": "129289639303257",
+    "last_seen": "2024-09-20T15:35:25.535Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "0"
+  },
+  {
+    "address": "aleo1czp8gure8caqnpqgxsacc2kv2zhggz4ujp065wwfa76qwxggrups6ap3jg",
+    "stake": "154877602416286",
+    "last_seen": "2024-09-20T15:35:25.537Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo19dpf763gtj9h34wwk9a45ccfmd07r2kckqu7y9av3d5lly0asygss2scur",
+    "stake": "30998908917827",
+    "last_seen": "2024-09-20T15:35:25.538Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo1zdzzxfrhgzlhh89vqpf4384ewqs0g32wqzvdeltzlynq25hkju8s38953f",
+    "stake": "20662944275371",
+    "last_seen": "2024-09-20T15:35:25.539Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo1u4hqhsukjqkm6q02kc5cjm470srwt77x9yt0fa2j263wtqzrevyqmdccy3",
+    "stake": "154915911483571",
+    "last_seen": "2024-09-20T15:35:25.539Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo17m3l8a4hmf3wypzkf5lsausfdwq9etzyujd0vmqh35ledn2sgvqqzqkqal",
+    "stake": "155018076284406",
+    "last_seen": "2024-09-20T15:35:25.540Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo1ekqgrpvru7demjrp92sxkdr2cqetr8qrkkcmmvkr8kqem9r5t59qwa780g",
+    "stake": "20672869093970",
+    "last_seen": "2024-09-20T15:35:25.540Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo1uhd3qew7kgs8zmcm2w23xk7j4fjrf448zdjjslcngl9h3u3rs5zsltfmez",
+    "stake": "20679971428614",
+    "last_seen": "2024-09-20T15:35:25.540Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo1fpee4gzwuehvxh3gknygf4n3g76tqwsgxu4mxn7rsgfe8rklmsxqlu68e2",
+    "stake": "20662726292882",
+    "last_seen": "2024-09-20T15:35:25.541Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo1dxf42pkgv5fcsnanhw2h4lvzcaxxcfwajtsghvqljugnpwfc5vxq0ulav5",
+    "stake": "20677767618942",
+    "last_seen": "2024-09-20T15:35:25.541Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo1vcyhz3cwu45js0sndl8hf7zzfg0slg20x8wjsv2r9q3havgzgupqxm0nad",
+    "stake": "30998910293294",
+    "last_seen": "2024-09-20T15:35:25.541Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo105eppvclpq20dv0282yft3m2njn9j4znrz087uj3r92gcpttagpsedem0x",
+    "stake": "20662730491941",
+    "last_seen": "2024-09-20T15:35:25.542Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo17mp7lz72e7zhvzyj8u2szrts2r98vz37sd6z9w500s99aaq4sq8s34vgv9",
+    "stake": "154933752652274",
+    "last_seen": "2024-09-20T15:35:25.542Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo1l7avejc23yv6e8nx4udjwz89dw6mg95dzsp936hf77yuhnjywv9syl0ywc",
+    "stake": "20690759326717",
+    "last_seen": "2024-09-20T15:35:25.543Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": true,
+    "bonded": "10"
+  },
+  {
+    "address": "aleo1anfvuep47h0r9q349gu76d8twga8w98p0z2ggrktupcj450d5g8q7w3e2p",
+    "stake": "154892698615029",
+    "last_seen": "2024-09-20T15:35:25.543Z",
+    "total_blocks_produced": 0,
+    "total_rewards": "0",
+    "is_active": false,
+    "bonded": "100"
+  }
+]
