@@ -6,7 +6,7 @@ export const sequelize = new Sequelize(config.database.url, {
   logging: false,
 });
 
-// Model ilişkilerini burada tanımlayın
+// Define model relations here
 import { Validator } from './models/Validator.js';
 import { Block } from './models/Block.js';
 import { Transaction } from './models/Transaction.js';
