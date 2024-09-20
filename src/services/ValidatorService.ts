@@ -30,12 +30,12 @@ export class ValidatorService {
         }
       }
   
-      logger.info(`${Object.keys(committee.members).length} validator başarıyla güncellendi.`);
+      logger.info(`${Object.keys(committee.members).length} validators successfully updated.`);
     } catch (error: unknown) {
       if (error instanceof Error) {
-        logger.error(`Doğrulayıcı güncelleme hatası: ${error.message}`);
+        logger.error(`Validator update error: ${error.message}`);
       } else {
-        logger.error('Doğrulayıcı güncelleme sırasında bilinmeyen bir hata oluştu');
+        logger.error('An unknown error occurred during validator update');
       }
     }
   }
@@ -47,7 +47,7 @@ export class ValidatorService {
         [address]
       );
       if (validator.rows.length === 0) {
-        throw new Error('Doğrulayıcı bulunamadı');
+        throw new Error('Validator not found');
       }
 
       const recentBlocks = await this.snarkOSDBService.getBlocksByValidator(address, 100);
@@ -63,9 +63,9 @@ export class ValidatorService {
       return { validator: validator.rows[0], performance };
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(`Doğrulayıcı performans hesaplama hatası: ${error.message}`);
+        throw new Error(`Validator performance calculation error: ${error.message}`);
       } else {
-        throw new Error('Doğrulayıcı performans hesaplama sırasında bilinmeyen bir hata oluştu');
+        throw new Error('An unknown error occurred during validator performance calculation');
       }
     }
   }

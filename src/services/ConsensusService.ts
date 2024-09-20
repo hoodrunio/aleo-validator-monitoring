@@ -8,16 +8,16 @@ class ConsensusService {
         try {
             const latestHeight = await this.aleoSDKService.getLatestBlockHeight();
             if (latestHeight) {
-                logger.info(`Bağlantı testi başarılı. En son blok yüksekliği: ${latestHeight}`);
+                logger.info(`Connection test successful. Latest block height: ${latestHeight}`);
             } else {
-                throw new Error('Blok yüksekliği alınamadı');
+                throw new Error('Block height could not be retrieved');
             }
         } catch (error) {
-            logger.error('Bağlantı testi sırasında hata:', error);
+            logger.error('Error during connection test:', error);
             if (error instanceof Error) {
-                throw new Error(`Aleo ağına bağlanılamadı: ${error.message}`);
+                throw new Error(`Could not connect to Aleo network: ${error.message}`);
             } else {
-                throw new Error('Aleo ağına bağlanılamadı: Bilinmeyen bir hata oluştu');
+                throw new Error('Could not connect to Aleo network: An unknown error occurred');
             }
         }
     }
@@ -26,19 +26,19 @@ class ConsensusService {
         try {
           const latestBlock = await this.aleoSDKService.getLatestBlock();
           if (!latestBlock) {
-            logger.warn('En son blok alınamadı');
+            logger.warn('Could not get the latest block');
             return null;
           }
-          logger.debug('En son blok:', JSON.stringify(latestBlock, (_, v) => typeof v === 'bigint' ? v.toString() : v));
+          logger.debug('Latest block:', JSON.stringify(latestBlock, (_, v) => typeof v === 'bigint' ? v.toString() : v));
           if (typeof latestBlock.height !== 'number' || isNaN(latestBlock.height)) {
-            logger.warn(`Geçersiz blok yüksekliği: ${latestBlock.height}`);
+            logger.warn(`Invalid block height: ${latestBlock.height}`);
             return null;
           }
           
-          const blocksPerRound = 100; // Varsayılan değer, gerçek değeri projenize göre ayarlayın
+          const blocksPerRound = 100; // Default value, adjust according to your project
           return Math.floor(latestBlock.height / blocksPerRound);
         } catch (error) {
-          logger.error("getCurrentRound hatası:", error);
+          logger.error("getCurrentRound error:", error);
           return null;
         }
       }
@@ -47,10 +47,9 @@ class ConsensusService {
         try {
             return await this.aleoSDKService.getLatestCommittee();
         } catch (error) {
-            logger.error('getCommittee hatası:', error);
-            throw new Error('Komite alınamadı: ' + (error instanceof Error ? error.message : String(error)));
+            logger.error('getCommittee error:', error);
+            throw new Error('Failed to get committee: ' + (error instanceof Error ? error.message : String(error)));
         }
     }
 }
 export default ConsensusService;
-

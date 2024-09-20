@@ -14,12 +14,12 @@ export class BlockService {
       const latestSyncedBlock = await this.snarkOSDBService.getLatestBlockHeight();
       const latestNetworkBlock = await this.getLatestBlock();
       
-      console.log("En son senkronize edilen blok:", latestSyncedBlock);
-      console.log("Ağdaki en son blok:", latestNetworkBlock);
+      console.log("Latest synchronized block:", latestSyncedBlock);
+      console.log("Latest block in the network:", latestNetworkBlock);
       
-      // ... mevcut senkronizasyon mantığı ...
+      // ... existing synchronization logic ...
     } catch (error) {
-      console.error('Blok senkronizasyonu sırasında hata oluştu:', error);
+      console.error('Error occurred during block synchronization:', error);
     }
   }
 
@@ -31,10 +31,10 @@ export class BlockService {
         if (block) {
           blocks.push(block);
         } else {
-          logger.warn(`Blok alınamadı: ${height}`);
+          logger.warn(`Block not retrieved: ${height}`);
         }
       } catch (error) {
-        logger.error(`${height} yüksekliğindeki blok alınırken hata oluştu:`, error);
+        logger.error(`Error occurred while fetching block at height ${height}:`, error);
       }
     }
     return blocks;
@@ -44,11 +44,11 @@ export class BlockService {
     try {
       const latestHeight = await this.aleoSDKService.getLatestBlockHeight();
       if (latestHeight === null) {
-        throw new Error('En son blok yüksekliği alınamadı');
+        throw new Error('Failed to get the latest block height');
       }
       return this.aleoSDKService.getBlockByHeight(latestHeight);
     } catch (error) {
-      logger.error('En son blok alınırken hata oluştu:', error);
+      logger.error('Error occurred while fetching the latest block:', error);
       throw error;
     }
   }

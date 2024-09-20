@@ -24,7 +24,7 @@ const sequelize = new Sequelize(config.database.url, {
     logging: console.log,
 });
 
-// User modelini tanımlayın
+// Define User model
 const User = sequelize.define('User', {
     username: {
         type: DataTypes.STRING,
@@ -38,22 +38,22 @@ const User = sequelize.define('User', {
     },
 });
 
-// Veritabanı bağlantısını başlatın ve test edin
+// Initialize and test database connection
 export async function initDatabase() {
     try {
         await sequelize.authenticate();
-        console.log('Veritabanına başarıyla bağlanıldı.');
+        console.log('Successfully connected to the database.');
 
-        // Modelleri senkronize edin (tabloları oluşturun)
-        await sequelize.sync({ alter: true }); // force: true yerine alter: true kullanıyoruz
-        console.log('Veritabanı modelleri senkronize edildi.');
+        // Synchronize models (create tables)
+        await sequelize.sync({ alter: true }); // Using alter: true instead of force: true
+        console.log('Database models synchronized.');
 
     } catch (error) {
-        console.error('Veritabanı başlatılırken hata oluştu:', error);
-        throw error; // Hatayı yukarı fırlat
+        console.error('Error occurred while initializing the database:', error);
+        throw error; // Throw the error up
     }
 }
 
-// initDatabase fonksiyonunu burada çağırmıyoruz
+// We're not calling initDatabase function here
 
 export { sequelize, User, config };

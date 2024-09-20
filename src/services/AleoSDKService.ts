@@ -23,25 +23,25 @@ export class AleoSDKService {
 
   async getLatestBlock(): Promise<Block | null> {
     try {
-      logger.debug('En son bloğu getirme işlemi başlatılıyor...');
+      logger.debug('Starting to fetch the latest block...');
       const latestBlock = await this.network.getLatestBlock();
-      logger.debug('Ham API yanıtı:', JSON.stringify(latestBlock, null, 2));
+      logger.debug('Raw API response:', JSON.stringify(latestBlock, null, 2));
       if (latestBlock) {
         const convertedBlock = this.convertApiBlockToBlock(latestBlock);
-        logger.debug('Dönüştürülmüş en son blok:', JSON.stringify(convertedBlock, (_, v) => typeof v === 'bigint' ? v.toString() : v));
+        logger.debug('Converted latest block:', JSON.stringify(convertedBlock, (_, v) => typeof v === 'bigint' ? v.toString() : v));
         return convertedBlock;
       } else {
-        throw new Error('Geçersiz blok yapısı alındı');
+        throw new Error('Invalid block structure received');
       }
     } catch (error) {
-      logger.error('getLatestBlock hatası:', error);
+      logger.error('getLatestBlock error:', error);
       return null;
     }
   }
 
   private convertApiBlockToBlock(apiBlock: any): Block {
     if (!apiBlock) {
-      throw new Error('Geçersiz blok yapısı');
+      throw new Error('Invalid block structure');
     }
     
     logger.debug('API Block:', JSON.stringify(apiBlock, null, 2));
@@ -61,7 +61,7 @@ export class AleoSDKService {
     try {
       return await this.network.getLatestCommittee();
     } catch (error) {
-      logger.error('getLatestCommittee hatası:', error);
+      logger.error('getLatestCommittee error:', error);
       throw error;
     }
   }
@@ -74,15 +74,15 @@ export class AleoSDKService {
       }
       return transactions;
     } catch (error) {
-      logger.error('getTransactionsInMempool hatası:', error);
+      logger.error('getTransactionsInMempool error:', error);
       throw error;
     }
   }
   async getBlock(height: number): Promise<any> {
     try {
-      logger.debug(`${height} yüksekliğindeki blok getiriliyor...`);
+      logger.debug(`Fetching block at height ${height}...`);
       const block = await this.network.getBlock(height);
-      logger.debug(`Ham API yanıtı: ${JSON.stringify(block)}`);
+      logger.debug(`Raw API response: ${JSON.stringify(block)}`);
       return block;
     } catch (error) {
       logger.error(`Error while fetching block at height ${height}:`, error);
@@ -134,16 +134,16 @@ export class AleoSDKService {
       if (typeof latestHeight === 'number') {
         return latestHeight;
       } else {
-        logger.warn('Beklenmeyen yanıt formatı:', latestHeight);
+        logger.warn('Unexpected response format:', latestHeight);
         return null;
       }
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        logger.error('Axios hatası:', error.message);
-        logger.error('Yanıt durumu:', error.response?.status);
-        logger.error('Yanıt verisi:', error.response?.data);
+        logger.error('Axios error:', error.message);
+        logger.error('Response status:', error.response?.status);
+        logger.error('Response data:', error.response?.data);
       } else {
-        logger.error('Bilinmeyen hata:', error);
+        logger.error('Unknown error:', error);
       }
       throw error;
     }
@@ -155,11 +155,10 @@ export class AleoSDKService {
       logger.debug('Raw latest block:', JSON.stringify(latestBlock, null, 2));
       return latestBlock;
     } catch (error) {
-      logger.error('getRawLatestBlock hatası:', error);
+      logger.error('getRawLatestBlock error:', error);
       throw error;
     }
   }
 }
 
 export default AleoSDKService;
-

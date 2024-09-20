@@ -9,8 +9,8 @@ export class RestApiService {
       const response = await axios.get(`${this.baseUrl}/latest/committee`);
       return response.data;
     } catch (error) {
-      logger.error('REST API getLatestCommittee hatası:', error);
-      throw new Error('REST API getLatestCommittee hatası: ' + (error instanceof Error ? error.message : String(error)));
+      logger.error('REST API getLatestCommittee error:', error);
+      throw new Error('REST API getLatestCommittee error: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 
@@ -20,9 +20,9 @@ export class RestApiService {
       return response.data;
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(`REST API getMemoryPoolTransactions hatası: ${error.message}`);
+        throw new Error(`REST API getMemoryPoolTransactions error: ${error.message}`);
       } else {
-        throw new Error('REST API getMemoryPoolTransactions hatası: Bilinmeyen bir hata oluştu');
+        throw new Error('REST API getMemoryPoolTransactions error: An unknown error occurred');
       }
     }
   }

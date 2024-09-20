@@ -1,6 +1,6 @@
 import pg from 'pg';
 import logger from '../utils/logger.js';
-import { Block } from '../types/Block.js';  // Bu satırı ekleyin
+import { Block } from '../types/Block.js';
 
 const { Pool: PgPool } = pg;
 
@@ -37,9 +37,9 @@ export class SnarkOSDBService {
           total_fees BIGINT
         );
       `);
-      console.log("Veritabanı tabloları başarıyla oluşturuldu ve güncellendi");
+      console.log("Database tables successfully created and updated");
     } catch (error) {
-      console.error("Veritabanı başlatma hatası:", error);
+      console.error("Database initialization error:", error);
       throw error;
     }
   }
@@ -50,9 +50,9 @@ export class SnarkOSDBService {
       return result.rows;
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(`SnarkOS DB getValidators hatası: ${error.message}`);
+        throw new Error(`SnarkOS DB getValidators error: ${error.message}`);
       }
-      throw new Error('SnarkOS DB getValidators hatası: Bilinmeyen bir hata oluştu');
+      throw new Error('SnarkOS DB getValidators error: An unknown error occurred');
     }
   }
 
@@ -65,9 +65,9 @@ export class SnarkOSDBService {
       return result.rows;
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(`SnarkOS DB getBlocksByValidator hatası: ${error.message}`);
+        throw new Error(`SnarkOS DB getBlocksByValidator error: ${error.message}`);
       }
-      throw new Error('SnarkOS DB getBlocksByValidator hatası: Bilinmeyen bir hata oluştu');
+      throw new Error('SnarkOS DB getBlocksByValidator error: An unknown error occurred');
     }
   }
 
@@ -89,9 +89,9 @@ export class SnarkOSDBService {
     } catch (error: unknown) {
       await client.query('ROLLBACK');
       if (error instanceof Error) {
-        throw new Error(`SnarkOS DB insertBlock hatası: ${error.message}`);
+        throw new Error(`SnarkOS DB insertBlock error: ${error.message}`);
       }
-      throw new Error('SnarkOS DB insertBlock hatası: Bilinmeyen bir hata oluştu');
+      throw new Error('SnarkOS DB insertBlock error: An unknown error occurred');
     } finally {
       client.release();
     }
@@ -105,9 +105,9 @@ export class SnarkOSDBService {
       );
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(`SnarkOS DB insertTransaction hatası: ${error.message}`);
+        throw new Error(`SnarkOS DB insertTransaction error: ${error.message}`);
       }
-      throw new Error('SnarkOS DB insertTransaction hatası: Bilinmeyen bir hata oluştu');
+      throw new Error('SnarkOS DB insertTransaction error: An unknown error occurred');
     }
   }
 
@@ -119,9 +119,9 @@ export class SnarkOSDBService {
       );
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(`SnarkOS DB updateValidator hatası: ${error.message}`);
+        throw new Error(`SnarkOS DB updateValidator error: ${error.message}`);
       }
-      throw new Error('SnarkOS DB updateValidator hatası: Bilinmeyen bir hata oluştu');
+      throw new Error('SnarkOS DB updateValidator error: An unknown error occurred');
     }
   }
 
@@ -135,11 +135,11 @@ export class SnarkOSDBService {
       return result;
     } catch (error: unknown) {
       if (error instanceof Error) {
-        console.error('Sorgu hatası:', error.message);
-        throw new Error(`Veritabanı sorgusu başarısız oldu: ${error.message}`);
+        console.error('Query error:', error.message);
+        throw new Error(`Database query failed: ${error.message}`);
       }
-      console.error('Sorgu hatası: Bilinmeyen bir hata oluştu');
-      throw new Error('Veritabanı sorgusu başarısız oldu: Bilinmeyen bir hata oluştu');
+      console.error('Query error: An unknown error occurred');
+      throw new Error('Database query failed: An unknown error occurred');
     }
   }
 
@@ -173,7 +173,7 @@ export class SnarkOSDBService {
       const result = await this.pool.query('SELECT MAX(height) as max_height FROM blocks');
       return result.rows[0].max_height || 0;
     } catch (error) {
-      logger.error('En son blok yüksekliği alınırken hata oluştu:', error);
+      logger.error('Error getting latest block height:', error);
       throw error;
     }
   }
@@ -191,7 +191,7 @@ export class SnarkOSDBService {
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');
-      logger.error('Bloklar kaydedilirken hata oluştu:', error);
+      logger.error('Error saving blocks:', error);
       throw error;
     } finally {
       client.release();
@@ -200,7 +200,7 @@ export class SnarkOSDBService {
 
   async testDatabaseOperations(): Promise<void> {
     try {
-      // Test validator'ı ekleme
+      // Adding test validator
       const testValidator = {
         address: 'test_address',
         stake: BigInt(1000),
@@ -209,9 +209,9 @@ export class SnarkOSDBService {
         total_rewards: BigInt(0)
       };
       await this.updateValidator(testValidator.address, testValidator.stake);
-      logger.info('Test validator başarıyla eklendi');
+      logger.info('Test validator added successfully');
 
-      // Test bloğu ekleme
+      // Adding test block
       const testBlock: Block = {
         height: 999999,
         hash: 'test_hash',
@@ -222,18 +222,18 @@ export class SnarkOSDBService {
         total_fees: BigInt(100)
       };
       await this.insertBlock(testBlock);
-      logger.info('Test bloğu başarıyla eklendi');
+      logger.info('Test block added successfully');
 
-      // Eklenen veriyi çekme
+      // Fetching added data
       const result = await this.query('SELECT * FROM blocks WHERE height = $1', [999999]);
-      logger.info('Çekilen test bloğu:', result.rows[0]);
+      logger.info('Fetched test block:', result.rows[0]);
 
-      // Test verilerini silme
+      // Deleting test data
       await this.query('DELETE FROM blocks WHERE height = $1', [999999]);
       await this.query('DELETE FROM validators WHERE address = $1', ['test_address']);
-      logger.info('Test verileri silindi');
+      logger.info('Test data deleted');
     } catch (error) {
-      logger.error('Veritabanı test işlemleri sırasında hata:', error);
+      logger.error('Error during database test operations:', error);
     }
   }
 
@@ -241,13 +241,13 @@ export class SnarkOSDBService {
     try {
       await this.pool.query(
         'UPDATE validators SET total_blocks_produced = total_blocks_produced + 1, total_rewards = total_rewards + $1, last_seen = NOW() WHERE address = $2',
-        [blockReward.toString(), address] // bigint'i string'e çevir
+        [blockReward.toString(), address] // convert bigint to string
       );
     } catch (error: unknown) {
       if (error instanceof Error) {
-        throw new Error(`SnarkOS DB updateValidatorBlockProduction hatası: ${error.message}`);
+        throw new Error(`SnarkOS DB updateValidatorBlockProduction error: ${error.message}`);
       }
-      throw new Error('SnarkOS DB updateValidatorBlockProduction hatası: Bilinmeyen bir hata oluştu');
+      throw new Error('SnarkOS DB updateValidatorBlockProduction error: An unknown error occurred');
     }
   }
 }

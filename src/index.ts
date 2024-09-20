@@ -13,7 +13,7 @@ import { sequelize, User, config, initDatabase } from './config/index.js';
 const app = express();
 let port = process.env.PORT ? parseInt(process.env.PORT) : 4000;
 
-// Uygulama başlatıldığında bağlantıyı test et
+// Test the connection when the application starts
 
 logger.info(`Initializing AleoSDKService with URL: ${config.aleo.sdkUrl} and network type: ${config.aleo.networkType}`);
 const aleoSDKService = new AleoSDKService(config.aleo.sdkUrl, config.aleo.networkType as 'mainnet' | 'testnet');
@@ -26,40 +26,40 @@ const primaryService = new PrimaryService(aleoSDKService);
 logger.info(`ConsensusService initialized with URL: ${config.aleo.sdkUrl}`);
 
 const MAX_RETRIES = 5;
-const RETRY_DELAY = 5000; // 5 saniye
+const RETRY_DELAY = 5000; // 5 seconds
 
 async function tryConnect(maxRetries = MAX_RETRIES, retryDelay = RETRY_DELAY) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       await consensusService.testConnection();
-      logger.info('Aleo ağına başarıyla bağlanıldı.');
+      logger.info('Successfully connected to the Aleo network.');
       return;
     } catch (error) {
-      logger.error(`Bağlantı denemesi ${attempt}/${maxRetries} başarısız oldu:`, error);
+      logger.error(`Connection attempt ${attempt}/${maxRetries} failed:`, error);
       if (error instanceof Error) {
-        logger.error('Hata detayları:', error.message);
-        logger.error('Hata yığını:', error.stack);
+        logger.error('Error details:', error.message);
+        logger.error('Error stack:', error.stack);
       }
       if (attempt < maxRetries) {
-        logger.info(`${retryDelay / 1000} saniye sonra yeniden denenecek...`);
+        logger.info(`Retrying in ${retryDelay / 1000} seconds...`);
         await new Promise(resolve => setTimeout(resolve, retryDelay));
       }
     }
   }
-  logger.error('Maksimum yeniden deneme sayısına ulaşıldı. Uygulama sonlandırılıyor.');
+  logger.error('Maximum retry count reached. Terminating the application.');
   process.exit(1);
 }
 
 function startServer() {
   app.listen(port, () => {
-    logger.info(`Sunucu ${port} portunda çalışyor`);
+    logger.info(`Server is running on port ${port}`);
   }).on('error', (error: NodeJS.ErrnoException) => {
     if (error.code === 'EADDRINUSE') {
-      logger.warn(`${port} portu zaten kullanımda. Farklı bir port denenecek.`);
+      logger.warn(`Port ${port} is already in use. Trying a different port.`);
       port++;
       startServer();
     } else {
-      logger.error('Sunucu başlatılırken hata oluştu:', error);
+      logger.error('Error occurred while starting the server:', error);
     }
   });
 }
@@ -71,30 +71,30 @@ async function main() {
     await tryConnect();
     startServer();
 
-    // Periyodik validator güncellemesi
+    // Periodic validator update
     setInterval(async () => {
       await validatorService.updateValidators();
-    }, 60 * 60 * 1000); // Her saat başı
+    }, 60 * 60 * 1000); // Every hour
 
-    // İlk validator güncellemesini hemen yap
+    // Perform the first validator update immediately
     await validatorService.updateValidators();
 
-    // Periyodik blok senkronizasyonu
+    // Periodic block synchronization
     setInterval(async () => {
       await blockService.syncBlocks();
-    }, 5 * 60 * 1000); // Her 5 dakikada bir
+    }, 5 * 60 * 1000); // Every 5 minutes
 
-    // İlk blok senkronizasyonunu hemen yap
+    // Perform the first block synchronization immediately
     await blockService.syncBlocks();
 
   } catch (error) {
-    logger.error('Uygulama başlatılırken hata oluştu:', error);
+    logger.error('Error occurred while starting the application:', error);
     process.exit(1);
   }
 }
 
 main().catch(error => {
-  logger.error('Beklenmeyen bir hata oluştu:', error);
+  logger.error('An unexpected error occurred:', error);
   process.exit(1);
 });
 
@@ -105,8 +105,8 @@ app.get('/api/validators', async (req, res) => {
     const validators = await snarkOSDBService.getValidators();
     res.json(validators);
   } catch (error) {
-    logger.error('Validator bilgileri alınırken hata oluştu:', error);
-    res.status(500).json({ error: 'Validator bilgileri alınamadı' });
+    logger.error('Error occurred while fetching validator information:', error);
+    res.status(500).json({ error: 'Failed to fetch validator information' });
   }
 });
 
@@ -114,28 +114,28 @@ app.get('/api/consensus/round', async (req, res) => {
   try {
     const currentRound = await consensusService.getCurrentRound();
     if (currentRound === null) {
-      res.status(404).json({ error: 'Mevcut tur hesaplanamadı' });
+      res.status(404).json({ error: 'Current round could not be calculated' });
     } else {
       res.json({ currentRound });
     }
   } catch (error) {
-    logger.error('Mevcut tur alınırken hata:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Bilinmeyen bir hata oluştu' });
+    logger.error('Error occurred while fetching current round:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error occurred' });
   }
 });
 
 app.get('/api/consensus/committee', async (req, res) => {
   try {
-    logger.info('/api/consensus/committee için istek alındı');
+    logger.info('Request received for /api/consensus/committee');
     const committee = await consensusService.getCommittee();
-    logger.info('Komite başarıyla alındı');
+    logger.info('Committee successfully retrieved');
     res.json({ committee });
   } catch (error) {
-    logger.error('Komite endpoint hatası:', error);
+    logger.error('Committee endpoint error:', error);
     if (error instanceof Error) {
-      res.status(500).json({ error: `Komite alınamadı: ${error.message}` });
+      res.status(500).json({ error: `Failed to retrieve committee: ${error.message}` });
     } else {
-      res.status(500).json({ error: 'Komite alınamadı: Bilinmeyen bir hata oluştu' });
+      res.status(500).json({ error: 'Failed to retrieve committee: Unknown error occurred' });
     }
   }
 });
@@ -148,18 +148,18 @@ app.get('/api/primary/transmissions', async (req, res) => {
     if (error instanceof Error) {
       res.status(500).json({ error: error.message });
     } else {
-      res.status(500).json({ error: 'Bilinmeyen bir hata oluştu' });
+      res.status(500).json({ error: 'An unknown error occurred' });
     }
   }
 });
 
-// Test rotaları
+// Test routes
 app.get('/api/test/latest-block', async (req, res) => {
   try {
     const latestBlock = await aleoSDKService.getLatestBlock();
     res.json(latestBlock);
   } catch (error) {
-    logger.error('Latest block fetch error:', error);
+    logger.error('Error fetching latest block:', error);
     res.status(500).json({ error: 'Failed to fetch latest block' });
   }
 });
@@ -206,21 +206,21 @@ app.get('/api/test/transactions/:height', async (req, res) => {
   }
 });
 
-// Veritabanı kullanımı örneği
+// Database usage example
 app.get('/api/users', async (req, res) => {
   try {
     const users = await User.findAll();
     res.json(users);
   } catch (error) {
-    logger.error('Kullanıcılar alınırken hata oluştu:', error);
-    res.status(500).json({ error: 'Kullanıcılar alınamadı' });
+    logger.error('Error occurred while fetching user information:', error);
+    res.status(500).json({ error: 'Failed to fetch user information' });
   }
 });
 
-// Mevcut importların altına ekleyin
+// Add below the existing imports
 import AleoSDKService from './services/AleoSDKService.js';
 
-// Diğer route'ların altına ekleyin
+// Add below other routes
 app.get('/api/test/latest-block-structure', async (req, res) => {
   try {
     const latestBlock = await aleoSDKService.getLatestBlock();
@@ -231,18 +231,18 @@ app.get('/api/test/latest-block-structure', async (req, res) => {
   }
 });
 
-// Diğer import'larn yanına ekleyin
+// Add next to other imports
 import { SnarkOSDBService } from './services/SnarkOSDBService.js';
 
-// Diğer route'ların yanına ekleyin
+// Add next to other routes
 app.get('/api/test/database', async (req, res) => {
   try {
     const snarkOSDBService = new SnarkOSDBService(config.database.url);
     await snarkOSDBService.testDatabaseOperations();
-    res.json({ message: 'Veritabanı test işlemleri tamamlandı. Logları kontrol edin.' });
+    res.json({ message: 'Database test operations completed. Check the logs.' });
   } catch (error) {
-    logger.error('Veritabanı test endpoint hatası:', error);
-    res.status(500).json({ error: 'Veritabanı test işlemleri sırasında hata oluştu' });
+    logger.error('Database test endpoint error:', error);
+    res.status(500).json({ error: 'An error occurred during database test operations' });
   }
 });
 

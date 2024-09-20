@@ -18,8 +18,8 @@ export class PrimaryService {
         data: tx
       }));
     } catch (error) {
-      console.error('İletimler toplanırken hata oluştu:', error);
-      throw new Error('İletimler toplanamadı');
+      console.error('Error occurred while collecting transmissions:', error);
+      throw new Error('Failed to collect transmissions');
     }
   }
 }
