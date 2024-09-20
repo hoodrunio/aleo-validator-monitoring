@@ -1,11 +1,17 @@
-import { AleoNetworkClient  } from '@provablehq/sdk';
+import { AleoNetworkClient } from '@provablehq/sdk';
 import winston from 'winston';
 import axios from 'axios';
 import { Block, APIBlock } from '../types/Block.js';
+import { validateBlock } from '../utils/validation.js';
+import { AppError, ValidationError, NotFoundError } from '../utils/errors.js';
+import { metrics } from '../utils/metrics.js';
 
 const logger = winston.createLogger({
   level: 'debug',
-  format: winston.format.simple(),
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
   transports: [
     new winston.transports.Console(),
     new winston.transports.File({ filename: 'error.log', level: 'error' }),
@@ -18,23 +24,38 @@ export class AleoSDKService {
 
   constructor(networkUrl: string, networkType: 'mainnet' | 'testnet') {
     this.network = new AleoNetworkClient(networkUrl);
-    logger.debug(`Network initialized with URL: ${networkUrl}`);
+    logger.info(`AleoSDKService initialized with ${networkType} at ${networkUrl}`);
   }
 
   async getLatestBlock(): Promise<Block | null> {
     try {
-      logger.debug('Starting to fetch the latest block...');
+      logger.debug('Fetching the latest block');
       const latestBlock = await this.network.getLatestBlock();
-      logger.debug('Raw API response:', JSON.stringify(latestBlock, null, 2));
-      if (latestBlock) {
-        const convertedBlock = this.convertApiBlockToBlock(latestBlock);
-        logger.debug('Converted latest block:', JSON.stringify(convertedBlock, (_, v) => typeof v === 'bigint' ? v.toString() : v));
-        return convertedBlock;
-      } else {
-        throw new Error('Invalid block structure received');
+      
+      if (!latestBlock) {
+        throw new NotFoundError('No block found');
       }
+
+      if (latestBlock instanceof Error) {
+        throw latestBlock;
+      }
+
+      const convertedBlock = this.convertApiBlockToBlock(latestBlock);
+      logger.debug('Converted latest block:', JSON.stringify(convertedBlock, null, 2));
+      
+      const { error } = validateBlock(convertedBlock);
+      if (error) {
+        throw new ValidationError(`Invalid block structure: ${error.message}`);
+      }
+      
+      logger.debug('Latest block fetched and validated', { blockHeight: convertedBlock.height });
+      metrics.incrementBlocksProcessed();
+      return convertedBlock;
     } catch (error) {
-      logger.error('getLatestBlock error:', error);
+      if (error instanceof AppError) {
+        throw error;
+      }
+      logger.error('Error fetching latest block', { error: error instanceof Error ? error.message : 'Unknown error' });
       return null;
     }
   }
@@ -47,13 +68,13 @@ export class AleoSDKService {
     logger.debug('API Block:', JSON.stringify(apiBlock, null, 2));
     
     return {
-      height: apiBlock.header?.metadata?.height ? Number(apiBlock.header.metadata.height) : undefined,
+      height: parseInt(apiBlock.header.metadata.height),
       hash: apiBlock.block_hash,
       previous_hash: apiBlock.previous_hash,
-      timestamp: apiBlock.header?.metadata?.timestamp ? new Date(apiBlock.header.metadata.timestamp * 1000).toISOString() : undefined,
+      timestamp: apiBlock.header?.metadata?.timestamp ? new Date(Number(apiBlock.header.metadata.timestamp) * 1000).toISOString() : undefined,
       transactions: apiBlock.transactions || [],
       validator_address: apiBlock.authority?.subdag?.subdag?.[Object.keys(apiBlock.authority.subdag.subdag)[0]]?.[0]?.batch_header?.author,
-      total_fees: apiBlock.header?.metadata?.cumulative_weight ? BigInt(apiBlock.header.metadata.cumulative_weight) : undefined,
+      total_fees: apiBlock.header?.metadata?.cumulative_weight ? apiBlock.header.metadata.cumulative_weight.toString() : undefined,
     };
   }
 
@@ -72,6 +93,7 @@ export class AleoSDKService {
       if (transactions instanceof Error) {
         throw transactions;
       }
+      metrics.setTransactionsInMempool(transactions.length);
       return transactions;
     } catch (error) {
       logger.error('getTransactionsInMempool error:', error);
@@ -138,13 +160,7 @@ export class AleoSDKService {
         return null;
       }
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        logger.error('Axios error:', error.message);
-        logger.error('Response status:', error.response?.status);
-        logger.error('Response data:', error.response?.data);
-      } else {
-        logger.error('Unknown error:', error);
-      }
+      this.handleAxiosError(error);
       throw error;
     }
   }
@@ -157,6 +173,18 @@ export class AleoSDKService {
     } catch (error) {
       logger.error('getRawLatestBlock error:', error);
       throw error;
+    }
+  }
+
+  private handleAxiosError(error: any): void {
+    if (axios.isAxiosError(error)) {
+      logger.error('Axios error', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
+    } else {
+      logger.error('Unknown error', { error: error.message });
     }
   }
 }

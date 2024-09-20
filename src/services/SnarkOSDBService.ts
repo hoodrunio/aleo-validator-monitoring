@@ -8,7 +8,12 @@ export class SnarkOSDBService {
   private pool: pg.Pool;
 
   constructor(connectionString: string) {
-    this.pool = new PgPool({ connectionString });
+    this.pool = new PgPool({
+      connectionString,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
   }
 
   async initializeDatabase(): Promise<void> {
@@ -23,10 +28,10 @@ export class SnarkOSDBService {
           total_blocks_produced INTEGER DEFAULT 0,
           total_rewards BIGINT DEFAULT 0
         );
-  
-        ALTER TABLE validators ADD COLUMN IF NOT EXISTS is_active BOOLEAN;
-        ALTER TABLE validators ADD COLUMN IF NOT EXISTS bonded BIGINT;
-  
+
+        CREATE INDEX IF NOT EXISTS idx_validators_stake ON validators(stake);
+        CREATE INDEX IF NOT EXISTS idx_validators_is_active ON validators(is_active);
+
         CREATE TABLE IF NOT EXISTS blocks (
           height BIGINT PRIMARY KEY,
           hash TEXT NOT NULL,
@@ -36,8 +41,27 @@ export class SnarkOSDBService {
           validator_address TEXT,
           total_fees BIGINT
         );
+
+        CREATE INDEX IF NOT EXISTS idx_blocks_validator_address ON blocks(validator_address);
+        CREATE INDEX IF NOT EXISTS idx_blocks_timestamp ON blocks(timestamp);
+
+        -- Eğer previous_hash sütunu yoksa ekle
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='blocks' AND column_name='previous_hash') THEN
+            ALTER TABLE blocks ADD COLUMN previous_hash TEXT;
+          END IF;
+        END $$;
       `);
-      console.log("Database tables successfully created and updated");
+      console.log("Database tables and indexes successfully created and updated");
+      
+      // Mevcut sütunları kontrol et
+      const result = await this.pool.query(`
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'blocks';
+      `);
+      console.log("Existing columns in blocks table:", result.rows.map(row => row.column_name));
     } catch (error) {
       console.error("Database initialization error:", error);
       throw error;
@@ -56,18 +80,27 @@ export class SnarkOSDBService {
     }
   }
 
-  async getBlocksByValidator(validatorAddress: string, limit: number): Promise<any[]> {
+  async getBlocksByValidator(validatorAddress: string, timeFrame: number): Promise<any[]> {
+    const query = `
+      SELECT * FROM blocks 
+      WHERE validator_address = $1 
+      AND timestamp > NOW() - INTERVAL '1 second' * $2 
+      ORDER BY height DESC
+    `;
+    const result = await this.pool.query(query, [validatorAddress, timeFrame]);
+    return result.rows;
+  }
+
+  async getTransactionsByValidator(validatorAddress: string, timeFrame: number): Promise<any[]> {
     try {
       const result = await this.pool.query(
-        'SELECT * FROM blocks WHERE validator_address = $1 ORDER BY height DESC LIMIT $2',
-        [validatorAddress, limit]
+        'SELECT t.* FROM transactions t JOIN blocks b ON t.block_height = b.height WHERE b.validator_address = $1 AND b.timestamp > NOW() - INTERVAL \'1 second\' * $2 ORDER BY t.timestamp DESC',
+        [validatorAddress, timeFrame]
       );
       return result.rows;
-    } catch (error: unknown) {
-      if (error instanceof Error) {
-        throw new Error(`SnarkOS DB getBlocksByValidator error: ${error.message}`);
-      }
-      throw new Error('SnarkOS DB getBlocksByValidator error: An unknown error occurred');
+    } catch (error) {
+      logger.error(`Error fetching transactions for validator ${validatorAddress}:`, error);
+      throw error;
     }
   }
 
@@ -75,20 +108,32 @@ export class SnarkOSDBService {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
+      console.log("Inserting block:", JSON.stringify(block, (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+      ));
       await client.query(
-        'INSERT INTO blocks (height, hash, previous_hash, timestamp, transactions_count) VALUES ($1, $2, $3, $4, $5)',
-        [block.height, block.hash, block.previous_hash, block.timestamp, block.transactions.length]
+        'INSERT INTO blocks (height, hash, previous_hash, timestamp, transactions_count, validator_address, total_fees) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [
+          block.height,
+          block.hash,
+          block.previous_hash,
+          block.timestamp ? new Date(block.timestamp).toISOString() : null,
+          block.transactions.length,
+          block.validator_address,
+          block.total_fees ? block.total_fees.toString() : null
+        ]
       );
       if (block.validator_address && block.total_fees) {
         await client.query(
           'UPDATE validators SET total_blocks_produced = total_blocks_produced + 1, total_rewards = total_rewards + $1, last_seen = $2 WHERE address = $3',
-          [block.total_fees.toString(), block.timestamp, block.validator_address]
+          [block.total_fees.toString(), block.timestamp ? new Date(block.timestamp) : new Date(), block.validator_address]
         );
       }
       await client.query('COMMIT');
     } catch (error: unknown) {
       await client.query('ROLLBACK');
       if (error instanceof Error) {
+        console.error("Error details:", error);
         throw new Error(`SnarkOS DB insertBlock error: ${error.message}`);
       }
       throw new Error('SnarkOS DB insertBlock error: An unknown error occurred');
@@ -178,14 +223,22 @@ export class SnarkOSDBService {
     }
   }
 
-  async saveBlocks(blocks: any[]): Promise<void> {
+  async saveBlocks(blocks: Block[]): Promise<void> {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
       for (const block of blocks) {
         await client.query(
-          'INSERT INTO blocks (height, hash, previous_hash, timestamp, data) VALUES ($1, $2, $3, $4, $5) ON CONFLICT (height) DO NOTHING',
-          [block.height, block.hash, block.previous_hash, block.timestamp, JSON.stringify(block.data)]
+          'INSERT INTO blocks (height, hash, previous_hash, timestamp, transactions_count, validator_address, total_fees) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (height) DO NOTHING',
+          [
+            block.height,
+            block.hash,
+            block.previous_hash,
+            block.timestamp,
+            block.transactions.length,
+            block.validator_address,
+            block.total_fees
+          ]
         );
       }
       await client.query('COMMIT');
@@ -226,7 +279,9 @@ export class SnarkOSDBService {
 
       // Fetching added data
       const result = await this.query('SELECT * FROM blocks WHERE height = $1', [999999]);
-      logger.info('Fetched test block:', result.rows[0]);
+      logger.info('Fetched test block:', JSON.stringify(result.rows[0], (key, value) =>
+        typeof value === 'bigint' ? value.toString() : value
+      ));
 
       // Deleting test data
       await this.query('DELETE FROM blocks WHERE height = $1', [999999]);
@@ -248,6 +303,52 @@ export class SnarkOSDBService {
         throw new Error(`SnarkOS DB updateValidatorBlockProduction error: ${error.message}`);
       }
       throw new Error('SnarkOS DB updateValidatorBlockProduction error: An unknown error occurred');
+    }
+  }
+
+  async getValidatorUptime(validatorAddress: string): Promise<number> {
+    try {
+      const result = await this.pool.query(`
+        SELECT 
+          COUNT(*) as total_blocks,
+          COUNT(CASE WHEN validator_address = $1 THEN 1 END) as produced_blocks
+        FROM blocks
+        WHERE timestamp > NOW() - INTERVAL '24 hours'
+      `, [validatorAddress]);
+
+      const { total_blocks, produced_blocks } = result.rows[0];
+      return (produced_blocks / total_blocks) * 100;
+    } catch (error) {
+      logger.error(`Error calculating uptime for validator ${validatorAddress}:`, error);
+      throw error;
+    }
+  }
+
+  async getValidatorRewards(validatorAddress: string, timeFrame: number): Promise<string> {
+    try {
+      const result = await this.pool.query(`
+        SELECT SUM(total_fees) as total_rewards
+        FROM blocks
+        WHERE validator_address = $1 AND timestamp > NOW() - INTERVAL '1 second' * $2
+      `, [validatorAddress, timeFrame]);
+      return result.rows[0].total_rewards?.toString() || '0';
+    } catch (error) {
+      logger.error(`Error calculating rewards for validator ${validatorAddress}:`, error);
+      throw error;
+    }
+  }
+
+  async getTotalBlocksInTimeFrame(timeFrame: number): Promise<number> {
+    try {
+      const result = await this.pool.query(`
+        SELECT COUNT(*) as total_blocks
+        FROM blocks
+        WHERE timestamp > NOW() - INTERVAL '1 second' * $1
+      `, [timeFrame]);
+      return parseInt(result.rows[0].total_blocks);
+    } catch (error) {
+      logger.error(`Error getting total blocks in time frame:`, error);
+      throw error;
     }
   }
 }

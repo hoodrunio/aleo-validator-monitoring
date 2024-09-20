@@ -2,13 +2,16 @@ import express from 'express';
 // import RestApiService from './services/RestApiService.js';
 import ValidatorService from './services/ValidatorService.js';
 import BlockService from './services/BlockService.js';
-import AlertService from './services/AlertService.js';
 import ConsensusService from './services/ConsensusService.js';
 import PrimaryService from './services/PrimaryService.js';
 import api from './api/index.js';
 import logger from './utils/logger.js';
 import { sequelize, User, config, initDatabase } from './config/index.js';
 // import { authMiddleware } from './api/middleware/auth.js';
+import { SyncService } from './services/SyncService.js';
+import { apiLimiter } from './api/middleware/rateLimiter';
+import { PerformanceMetricsService } from './services/PerformanceMetricsService.js';
+import { AlertService } from './services/AlertService.js';
 
 const app = express();
 let port = process.env.PORT ? parseInt(process.env.PORT) : 4000;
@@ -22,6 +25,9 @@ const validatorService = new ValidatorService(aleoSDKService, snarkOSDBService);
 const blockService = new BlockService(aleoSDKService, snarkOSDBService);
 const consensusService = new ConsensusService(aleoSDKService);
 const primaryService = new PrimaryService(aleoSDKService);
+const syncService = new SyncService(aleoSDKService, snarkOSDBService);
+const performanceMetricsService = new PerformanceMetricsService(snarkOSDBService);
+const alertService = new AlertService(snarkOSDBService, performanceMetricsService);
 
 logger.info(`ConsensusService initialized with URL: ${config.aleo.sdkUrl}`);
 
@@ -87,6 +93,13 @@ async function main() {
     // Perform the first block synchronization immediately
     await blockService.syncBlocks();
 
+    // Periodic block synchronization
+    setInterval(() => {
+      syncService.syncLatestBlocks(100).catch(error => {
+        logger.error('Block synchronization failed:', error);
+      });
+    }, 5 * 60 * 1000); // Every 5 minutes
+
   } catch (error) {
     logger.error('Error occurred while starting the application:', error);
     process.exit(1);
@@ -98,7 +111,7 @@ main().catch(error => {
   process.exit(1);
 });
 
-app.use('/api', api(validatorService, blockService));
+app.use('/api', api(validatorService, blockService, performanceMetricsService, alertService));
 
 app.get('/api/validators', async (req, res) => {
   try {
@@ -224,15 +237,26 @@ import AleoSDKService from './services/AleoSDKService.js';
 app.get('/api/test/latest-block-structure', async (req, res) => {
   try {
     const latestBlock = await aleoSDKService.getLatestBlock();
-    res.json(latestBlock);
+    if (latestBlock) {
+      res.json(latestBlock);
+    } else {
+      res.status(404).json({ error: 'Latest block not found' });
+    }
   } catch (error) {
     logger.error('Error fetching latest block structure:', error);
-    res.status(500).json({ error: 'Failed to fetch latest block structure' });
+    if (error instanceof ValidationError) {
+      res.status(400).json({ error: error.message });
+    } else if (error instanceof NotFoundError) {
+      res.status(404).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: 'Failed to fetch latest block structure' });
+    }
   }
 });
 
 // Add next to other imports
 import { SnarkOSDBService } from './services/SnarkOSDBService.js';
+import { NotFoundError, ValidationError } from './utils/errors.js';
 
 // Add next to other routes
 app.get('/api/test/database', async (req, res) => {
@@ -254,5 +278,16 @@ app.get('/api/test/raw-latest-block', async (req, res) => {
   } catch (error) {
     logger.error('Raw latest block fetch error:', error);
     res.status(500).json({ error: 'Failed to fetch raw latest block' });
+  }
+});
+
+app.get('/api/alerts/:address', async (req, res) => {
+  try {
+    const { address } = req.params;
+    const alerts = await alertService.checkAllAlerts(address);
+    res.json(alerts);
+  } catch (error) {
+    logger.error('Error checking alerts:', error);
+    res.status(500).json({ error: 'Failed to check alerts' });
   }
 });

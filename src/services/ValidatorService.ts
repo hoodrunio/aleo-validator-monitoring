@@ -55,12 +55,19 @@ export class ValidatorService {
       const performance = {
         blocksProduced: recentBlocks.length,
         averageBlockTime: this.calculateAverageBlockTime(recentBlocks),
-        totalFees: this.calculateTotalFees(recentBlocks),
+        totalFees: this.calculateTotalFees(recentBlocks).toString(), // BigInt'i string'e çevir
         totalBlocksProduced: validator.rows[0].total_blocks_produced,
-        totalRewards: validator.rows[0].total_rewards
+        totalRewards: validator.rows[0].total_rewards.toString()
       };
 
-      return { validator: validator.rows[0], performance };
+      return {
+        validator: {
+          ...validator.rows[0],
+          stake: validator.rows[0].stake.toString(), // BigInt'i string'e çevir
+          bonded: validator.rows[0].bonded.toString() // BigInt'i string'e çevir
+        },
+        performance
+      };
     } catch (error: unknown) {
       if (error instanceof Error) {
         throw new Error(`Validator performance calculation error: ${error.message}`);
@@ -78,8 +85,8 @@ export class ValidatorService {
     return timeDiffs.reduce((sum, diff) => sum + diff, 0) / timeDiffs.length;
   }
 
-  private calculateTotalFees(blocks: any[]): bigint {
-    return blocks.reduce((sum, block) => sum + BigInt(block.total_fees), BigInt(0));
+  private calculateTotalFees(blocks: any[]): string {
+    return blocks.reduce((sum, block) => sum + BigInt(block.total_fees), BigInt(0)).toString();
   }
 }
 

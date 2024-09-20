@@ -9,11 +9,25 @@ export interface Block {
 }
 
 export interface APIBlock {
-  height: number | string;
-  hash: string;
+  header: {
+    metadata: {
+      height: string;
+      timestamp: string;
+    };
+  };
+  block_hash: string;
   previous_hash: string;
-  timestamp: string;
   transactions: any[];
-  validator_address?: string;
-  total_fees?: string | number;
+  authority: {
+    subdag: {
+      subdag: {
+        [key: string]: {
+          batch_header: {
+            author: string;
+          };
+        }[];
+      };
+    };
+  };
+  signature: string;
 }
